@@ -1,0 +1,85 @@
+// Nexus — Prisma Schema
+// Database: PostgreSQL (Supabase / Neon recommended)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  username      String?   @unique
+  industry      String?
+  bio           String?
+  onboarded     Boolean   @default(false)
+  accounts    Account[]
+  sessions    Session[]
+  socialLinks SocialLink[]
+  analytics   CardView[]
+}
+
+model SocialLink {
+  id        String   @id @default(cuid())
+  userId    String
+  platform  String
+  url       String
+  username  String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analytics CardView[]
+  @@index([userId])
+}
+
+model CardView {
+  id           String   @id @default(cuid())
+  socialLinkId String
+  viewerUserId String?
+  createdAt    DateTime @default(now())
+  socialLink SocialLink @relation(fields: [socialLinkId], references: [id], onDelete: Cascade)
+  viewer     User?      @relation(fields: [viewerUserId], references: [id], onDelete: SetNull)
+  @@index([socialLinkId])
+}
